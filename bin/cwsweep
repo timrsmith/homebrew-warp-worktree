@@ -23,7 +23,7 @@ local wt name branch ahead removed=0
 for wt in "$base"/*(/N); do
   name="${wt:t}"
   if [[ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]]; then
-    print "skip   $name (uncommitted changes)"; continue
+    print -P "%F{yellow}•%f skip %F{cyan}$name%f %F{244}(uncommitted changes)%f"; continue
   fi
   if git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
     ahead="$(git -C "$wt" rev-list --count '@{u}..HEAD' 2>/dev/null)"
@@ -31,15 +31,16 @@ for wt in "$base"/*(/N); do
     ahead="$(git -C "$wt" rev-list --count 'origin/HEAD..HEAD' 2>/dev/null)"
   fi
   if [[ "$ahead" != 0 ]]; then
-    print "skip   $name (unpushed commits)"; continue
+    print -P "%F{yellow}•%f skip %F{cyan}$name%f %F{244}(unpushed commits)%f"; continue
   fi
-  if (( dry )); then print "would remove $name"; continue; fi
+  if (( dry )); then print -P "%F{244}would remove%f %F{cyan}$name%f"; continue; fi
   branch="$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null)"
   if git -C "$root" worktree remove "$wt" --force; then
     [[ -n "$branch" && "$branch" != HEAD ]] && git -C "$root" branch -D "$branch" >/dev/null 2>&1
-    print "remove $name${branch:+ (branch $branch)}"
+    print -P "%F{green}✓%f removed %F{cyan}$name%f${branch:+ %F{244}(branch $branch)%f}"
     (( removed++ ))
   fi
 done
-(( dry )) || git -C "$root" worktree prune >/dev/null 2>&1
-(( dry )) || print "cwsweep: removed $removed worktree(s)"
+(( dry )) && exit 0
+git -C "$root" worktree prune >/dev/null 2>&1
+print -P "%F{green}🧹 swept $removed worktree(s)%f"

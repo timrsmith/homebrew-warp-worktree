@@ -1,0 +1,33 @@
+#!/usr/bin/env zsh
+# cw-run [--new] <name> — internal launcher used by cw/cwa (keeps the Warp tab's
+# echoed command clean: `cw-run <name>` instead of a big compound command).
+#
+# Runs Claude in the CURRENT directory (the worktree), then on EVERY exit path
+# (/quit, Ctrl-D, Ctrl-C — via zsh's `{ … } always { … }`) offers to remove the
+# worktree if it's clean + pushed.
+#
+#   --new   brand-new worktree: start a fresh session (skips the `--continue`
+#           probe, so you never see the red "No conversation found" notice).
+#           Without it, resume the worktree's session, falling back to fresh.
+emulate -L zsh
+
+local new=0
+[[ "$1" == "--new" ]] && { new=1; shift }
+local name="${1:?cw-run: missing worktree name}"
+local root; root="$(git rev-parse --git-common-dir 2>/dev/null)"; root="${root:A:h}"
+
+if (( new )); then
+  print -P "%F{magenta}🌳%f  new worktree %F{cyan}%B${name}%b%f"
+else
+  print -P "%F{magenta}🌳%f  worktree %F{cyan}%B${name}%b%f %F{244}· resuming session%f"
+fi
+
+{
+  if (( new )); then
+    claude
+  else
+    claude --continue || claude
+  fi
+} always {
+  cd "$root" && cwrm --on-exit "$name"
+}

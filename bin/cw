@@ -1,51 +1,113 @@
 #!/usr/bin/env zsh
-# cw <name> — open a classic Warp tab IN .claude/worktrees/<name> running Claude
-# in that worktree (so the Warp tab follows the worktree, single tab, no
-# duplicate session). Creates the worktree first if it doesn't exist.
+# cw [-b <ref>] [name] — open a classic Warp tab IN .claude/worktrees/<name>
+# running Claude in that worktree (the Warp tab follows the worktree; single
+# tab, no duplicate session). Creates the worktree first if it doesn't exist.
 #
-# The worktree is created with plain `git worktree add` (NOT `claude --worktree`)
-# precisely so it exists before the tab opens and the tab can sit in it. Because
-# Claude therefore doesn't own it, cleanup is handled here instead: when you exit
-# Claude, you're prompted to remove the worktree IF it's clean + pushed
-# (`cwrm --on-exit`). Use `cwsweep` for bulk tidy-up. Part of warp-worktree.
+# With NO name, cw is interactive: pick an existing worktree or create a new one
+# (type a name, or leave blank to auto-generate a fun one).
+#
+# New worktrees are made with `git worktree add` (so the worktree exists before
+# the tab opens and the tab can sit in it), get the repo's `.worktreeinclude`
+# gitignored files copied in, and — since Claude doesn't own them — are cleaned
+# up here: on Claude exit you're prompted to remove the worktree if it's clean +
+# pushed (`cwrm --on-exit`); `cwsweep` does bulk tidy-up.
+#
+# Base for new worktrees: -b <ref>, else $CW_BASE, else `worktree.baseRef`
+# (`head` → local HEAD), else origin/HEAD (fresh).
 emulate -L zsh
 
 if [[ "$1" == -h || "$1" == --help ]]; then
-  print -r -- 'usage: cw <name>
+  print -r -- 'usage: cw [-b <ref>] [name]
   Open a Warp tab IN .claude/worktrees/<name> running Claude in that worktree
-  (creates the worktree if needed). On exit, prompts to remove it if clean + pushed.'
+  (creates it if needed). With no name, shows an interactive picker.
+  On exit, prompts to remove the worktree if it is clean + pushed.
+  -b <ref>   base for a NEW worktree (default: worktree.baseRef, else origin/HEAD;
+             $CW_BASE also works). e.g. -b HEAD, -b origin/main'
   exit 0
 fi
 
-local name="${1:?usage: cw <name>}"
+local base=""
+if [[ "$1" == -b || "$1" == --base ]]; then base="$2"; shift 2; fi
+local name="$1"
 
 local root; root="$(git rev-parse --git-common-dir 2>/dev/null)" || { print -u2 "cw: not in a git repo"; exit 1; }
 root="${root:A:h}"   # parent of the common .git = main working tree (works from inside a worktree)
-local wt="$root/.claude/worktrees/$name"
+local base_dir="$root/.claude/worktrees"
 
-if [[ -d "$wt" ]]; then
-  print -u2 "cw: opening existing worktree $name"
-else
-  print -u2 "cw: creating worktree $name"
-  git -C "$root" worktree add "$wt" -b "$name" origin/HEAD || exit 1
+# A fun, collision-free default name (brave-otter, lunar-comet, …).
+cw_genname() {
+  local -a adj=(swift brave calm lunar amber cosmic fuzzy jolly nimble quiet rapid vivid)
+  local -a noun=(otter falcon maple comet harbor willow ember pixel cedar lark fjord badger)
+  local n
+  repeat 50; do
+    n="${adj[RANDOM % ${#adj} + 1]}-${noun[RANDOM % ${#noun} + 1]}"
+    [[ -e "$base_dir/$n" ]] || { print -r -- "$n"; return; }
+  done
+  print -r -- "wt-$RANDOM"
+}
 
-  # Plain `git worktree add` makes a clean checkout with no untracked files and
-  # doesn't honor .worktreeinclude (that's a Claude-only step). Replicate it:
-  # copy gitignored files matching the repo's .worktreeinclude (e.g. .env) into
-  # the new worktree, preserving relative paths.
-  if [[ -f "$root/.worktreeinclude" ]]; then
-    local rel n=0
-    while IFS= read -r -d '' rel; do
-      git -C "$root" check-ignore -q -- "$rel" || continue   # only gitignored files
-      mkdir -p "$wt/${rel:h}"
-      cp -p "$root/$rel" "$wt/$rel" && (( n++ ))
-    done < <(git -C "$root" ls-files -o -i --exclude-from="$root/.worktreeinclude" -z 2>/dev/null)
-    (( n )) && print -u2 "cw: copied $n file(s) per .worktreeinclude"
+# Interactive picker (no name given): choose an existing worktree or create one.
+# Writes the chosen/typed name to stdout (UI renders on the tty, so capture is clean).
+cw_pick() {
+  local -a existing=("$base_dir"/*(/N:t))
+  local NEW='✨ new worktree…' choice nm
+  if command -v gum >/dev/null 2>&1; then
+    choice="$(gum choose --header 'Worktree:' "${existing[@]}" "$NEW")" || return 1
+  else
+    print -u2 'Select a worktree:'
+    select choice in "${existing[@]}" "$NEW"; do [[ -n "$choice" ]] && break; done
+    [[ -z "$choice" ]] && return 1
   fi
+  if [[ "$choice" != "$NEW" ]]; then print -r -- "$choice"; return 0; fi
+  if command -v gum >/dev/null 2>&1; then
+    nm="$(gum input --header 'New worktree name (blank = auto):' --placeholder 'feature-name')" || return 1
+  else
+    print -u2 -n 'New worktree name (blank = auto): '; read -r nm
+  fi
+  [[ -z "$nm" ]] && nm="$(cw_genname)"
+  print -r -- "$nm"
+}
+
+if [[ -z "$name" ]]; then
+  name="$(cw_pick)" || exit 0
+  [[ -z "$name" ]] && exit 0
 fi
 
-# Run Claude in the worktree (resume its session, else fresh). zsh's
-# `{ … } always { … }` runs the cleanup on EVERY exit path — /quit, Ctrl-D, or
-# Ctrl-C — so the exit-time removal prompt always fires.
-local cmd="{ claude --continue || claude } always { cd ${(q)root} && cwrm --on-exit ${(q)name} }"
-exec env WARP_HERE_CMD="$cmd" warp-here "$wt"
+local wt="$base_dir/$name"
+
+if [[ -d "$wt" ]]; then
+  print -P "%F{magenta}🌳%f opening existing worktree %F{cyan}$name%f"
+  exec env WARP_HERE_CMD="cw-run ${(q)name}" warp-here "$wt"
+fi
+
+# --- create a new worktree ---
+# Resolve base ref: -b/CW_BASE win, then worktree.baseRef (head → HEAD), else origin/HEAD.
+[[ -z "$base" ]] && base="$CW_BASE"
+if [[ -z "$base" ]] && command -v jq >/dev/null 2>&1; then
+  local sf ref=""
+  for sf in "$root/.claude/settings.json" "$HOME/.claude/settings.json"; do
+    [[ -f "$sf" ]] || continue
+    ref="$(jq -r '.worktree.baseRef // empty' "$sf" 2>/dev/null)"
+    [[ -n "$ref" ]] && break
+  done
+  [[ "$ref" == head ]] && base="HEAD"
+fi
+[[ -z "$base" ]] && base="origin/HEAD"
+
+print -P "%F{magenta}🌳%f creating worktree %F{cyan}$name%f %F{244}(base: $base)%f"
+git -C "$root" worktree add "$wt" -b "$name" "$base" || exit 1
+
+# Replicate Claude's .worktreeinclude: copy gitignored files matching the repo's
+# .worktreeinclude (e.g. .env) into the new worktree (git makes a clean checkout
+# with no untracked files, and `git worktree add` doesn't honor .worktreeinclude).
+if [[ -f "$root/.worktreeinclude" ]]; then
+  local rel n=0
+  while IFS= read -r -d '' rel; do
+    git -C "$root" check-ignore -q -- "$rel" || continue   # only gitignored files
+    mkdir -p "$wt/${rel:h}"
+    cp -p "$root/$rel" "$wt/$rel" && (( n++ ))
+  done < <(git -C "$root" ls-files -o -i --exclude-from="$root/.worktreeinclude" -z 2>/dev/null)
+  (( n )) && print -P "%F{244}↳ copied $n file(s) per .worktreeinclude%f"
+fi
+
+exec env WARP_HERE_CMD="cw-run --new ${(q)name}" warp-here "$wt"

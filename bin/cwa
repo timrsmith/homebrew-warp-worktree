@@ -21,9 +21,8 @@ local base="$root/.claude/worktrees"
 # prompt (zsh `always` fires it on every exit path).
 cwa_open() {
   local wt="$1" name="${1:t}"
-  local cmd="{ claude --continue || claude } always { cd ${(q)root} && cwrm --on-exit ${(q)name} }"
-  print "cwa: opening $name"
-  WARP_HERE_CMD="$cmd" warp-here "$wt"
+  print -P "%F{magenta}🌳%f  opening %F{cyan}$name%f"
+  WARP_HERE_CMD="cw-run ${(q)name}" warp-here "$wt"
 }
 
 if [[ -n "$1" ]]; then

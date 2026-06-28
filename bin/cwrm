@@ -57,19 +57,28 @@ cwrm_do() {
   git -C "$root" worktree remove "$wt" --force || return 1
   [[ -n "$branch" && "$branch" != HEAD ]] && git -C "$root" branch -D "$branch" >/dev/null 2>&1
   git -C "$root" worktree prune >/dev/null 2>&1
-  print "cwrm: removed $name${branch:+ (branch $branch)}"
+  print -P "%F{green}✓%f removed worktree %F{cyan}$name%f${branch:+ %F{244}(branch $branch)%f}"
 }
 
 if (( on_exit )); then
-  cwrm_safe || { print -u2 "cwrm: keeping $name (uncommitted or unpushed changes)"; exit 0; }
-  print -n "remove worktree '$name'? [y/N] "
-  local reply; read -r reply
-  if [[ "$reply" == [yY]* ]]; then cwrm_do; else print "cwrm: kept $name"; fi
+  cwrm_safe || { print -P "%F{244}•%f keeping %F{cyan}$name%f %F{244}(uncommitted or unpushed changes)%f"; exit 0; }
+  if command -v gum >/dev/null 2>&1; then
+    # Full TUI confirm (←/→ or y/n), default No.
+    if gum confirm --default=false "🧹 ${name} is clean & pushed — remove this worktree?"; then
+      cwrm_do
+    else
+      print -P "%F{244}•%f kept %F{cyan}$name%f"
+    fi
+  else
+    print -Pn "%F{cyan}🧹%f  %F{cyan}$name%f is clean & pushed — remove it? %F{244}[y/N]%f "
+    local reply; read -r reply
+    if [[ "$reply" == [yY]* ]]; then cwrm_do; else print -P "%F{244}•%f kept %F{cyan}$name%f"; fi
+  fi
   exit 0
 fi
 
 if (( ! force )) && ! cwrm_safe; then
-  print -u2 "cwrm: $name has uncommitted or unpushed changes — use --force to remove anyway"
+  print -u2 -P "%F{red}✗%f %F{cyan}$name%f has uncommitted or unpushed changes — use %B--force%b to remove anyway"
   exit 1
 fi
 cwrm_do

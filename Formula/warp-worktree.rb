@@ -9,9 +9,11 @@ class WarpWorktree < Formula
   head "https://github.com/timrsmith/homebrew-warp-worktree.git", branch: "main"
 
   depends_on :macos
+  depends_on "gum" # interactive picker + confirm TUIs
+  depends_on "jq"  # read worktree.baseRef from settings
 
   def install
-    bin.install "bin/warp-here", "bin/cw", "bin/cwa", "bin/cwrm", "bin/cwsweep"
+    bin.install "bin/warp-here", "bin/cw", "bin/cwa", "bin/cwrm", "bin/cwsweep", "bin/cw-run"
   end
 
   def caveats
@@ -24,9 +26,9 @@ class WarpWorktree < Formula
       Commands:
         warp-here [dir]   open a classic Warp tab at dir (default: $PWD) running
                           `claude --continue || claude`
-        cw <name>         open a tab IN .claude/worktrees/<name> running Claude
-                          (creates it if needed); on exit, prompts to remove it
-                          if it's clean + pushed
+        cw [name]         open a tab IN .claude/worktrees/<name> running Claude
+                          (creates it if needed); no name → interactive picker.
+                          On exit, prompts to remove it if clean + pushed
         cwa [name]        same, for every (or one) .claude/worktrees/*
         cwrm [--force] <name>   remove a worktree + branch (refuses if dirty/unpushed)
         cwsweep [-n]      remove all clean + pushed worktrees (bulk tidy-up)
