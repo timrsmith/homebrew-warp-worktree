@@ -1,16 +1,14 @@
 class WarpWorktree < Formula
   desc "Open Warp tabs into Claude Code git worktrees, with cleanup helpers"
   homepage "https://github.com/timrsmith/homebrew-warp-worktree"
-  # For a tagged release: point url at the tag tarball and fill in its sha256
-  # (see "Cutting a release" in the README). Until then, install with --HEAD.
   url "https://github.com/timrsmith/homebrew-warp-worktree/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "REPLACE_WITH_TARBALL_SHA256"
   license "MIT"
   head "https://github.com/timrsmith/homebrew-warp-worktree.git", branch: "main"
 
-  depends_on :macos
   depends_on "gum" # interactive picker + confirm TUIs
   depends_on "jq"  # read worktree.baseRef from settings
+  depends_on :macos
 
   def install
     bin.install "bin/warp-here", "bin/cw", "bin/cwa", "bin/cwrm", "bin/cwsweep", "bin/cw-run"
