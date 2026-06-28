@@ -4,6 +4,13 @@
 # unpushed changes). Bulk tidy-up for finished worktrees. Part of warp-worktree.
 emulate -L zsh
 
+if [[ "$1" == -h || "$1" == --help ]]; then
+  print -r -- 'usage: cwsweep [-n|--dry-run]
+  Remove every .claude/worktrees/* that is clean + pushed (skips dirty/unpushed).
+  -n / --dry-run: show what would be removed without removing anything.'
+  exit 0
+fi
+
 local dry=0
 [[ "$1" == "--dry-run" || "$1" == "-n" ]] && dry=1
 

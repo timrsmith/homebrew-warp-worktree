@@ -5,6 +5,13 @@
 # warp-worktree.
 emulate -L zsh
 
+if [[ "$1" == -h || "$1" == --help ]]; then
+  print -r -- 'usage: cwa [name]
+  Open a Warp tab in every .claude/worktrees/* (or just <name>), each running
+  Claude in its worktree, with the same exit-time cleanup prompt as cw.'
+  exit 0
+fi
+
 local root; root="$(git rev-parse --git-common-dir 2>/dev/null)" || { print -u2 "cwa: not in a git repo"; exit 1; }
 root="${root:A:h}"   # parent of the common .git = main working tree (works from inside a worktree)
 local base="$root/.claude/worktrees"

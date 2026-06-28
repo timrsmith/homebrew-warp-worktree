@@ -61,6 +61,8 @@ cwsweep -n                # preview which worktrees would be swept
 cwsweep                   # remove all clean + pushed worktrees
 ```
 
+Every command accepts `-h` / `--help`.
+
 Overrides (env var read by `warp-here`, honored by `cw`/`cwa` too):
 
 ```sh

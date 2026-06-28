@@ -10,6 +10,13 @@
 # (`cwrm --on-exit`). Use `cwsweep` for bulk tidy-up. Part of warp-worktree.
 emulate -L zsh
 
+if [[ "$1" == -h || "$1" == --help ]]; then
+  print -r -- 'usage: cw <name>
+  Open a Warp tab IN .claude/worktrees/<name> running Claude in that worktree
+  (creates the worktree if needed). On exit, prompts to remove it if clean + pushed.'
+  exit 0
+fi
+
 local name="${1:?usage: cw <name>}"
 
 local root; root="$(git rev-parse --git-common-dir 2>/dev/null)" || { print -u2 "cw: not in a git repo"; exit 1; }

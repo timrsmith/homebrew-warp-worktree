@@ -13,6 +13,14 @@
 # exited shell was inside the worktree. Part of warp-worktree.
 emulate -L zsh
 
+if [[ "$1" == -h || "$1" == --help ]]; then
+  print -r -- 'usage: cwrm [--on-exit] [--force] <name>
+  Remove the worktree .claude/worktrees/<name> and its branch.
+  Refuses if it has uncommitted or unpushed changes unless --force.
+  --on-exit: prompt to remove only if clean + pushed (used by cw on Claude exit).'
+  exit 0
+fi
+
 local on_exit=0 force=0
 while [[ "$1" == -* ]]; do
   case "$1" in

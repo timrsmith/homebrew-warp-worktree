@@ -20,6 +20,16 @@
 # Set WARP_HERE_DRY=1 to print what it would do instead of opening a tab.
 emulate -L zsh
 
+if [[ "$1" == -h || "$1" == --help ]]; then
+  print -r -- 'usage: warp-here [dir]
+  Open a classic Warp terminal tab at DIR (default: current dir) and run Claude.
+  Default tab command: claude --continue || claude
+Env:
+  WARP_HERE_CMD   command to run in the tab (e.g. claude --resume, or : for a bare shell)
+  WARP_HERE_DRY=1 print the tab-config instead of opening a tab'
+  exit 0
+fi
+
 local dir="${1:-$PWD}"
 [[ "$dir" = /* ]] || dir="$PWD/$dir"
 dir="${dir:A}"   # normalize to an absolute, symlink-resolved path
