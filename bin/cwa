@@ -1,7 +1,8 @@
 #!/usr/bin/env zsh
-# cwa [name] — open a Warp tab (via warp-here) in every .claude/worktrees/* of
-# the current repo, or just <name> if given. Each tab resumes that worktree's
-# Claude session (or starts fresh). Part of warp-worktree.
+# cwa [name] — open a Warp tab in every .claude/worktrees/* of the current repo
+# (or just <name>), each one IN its worktree running Claude (resume its session,
+# else fresh), with the same exit-time cleanup prompt as `cw`. Part of
+# warp-worktree.
 emulate -L zsh
 
 local root; root="$(git rev-parse --git-common-dir 2>/dev/null)" || { print -u2 "cwa: not in a git repo"; exit 1; }
@@ -9,16 +10,25 @@ root="${root:A:h}"   # parent of the common .git = main working tree (works from
 local base="$root/.claude/worktrees"
 [[ -d "$base" ]] || { print -u2 "cwa: no worktrees under $base"; exit 1; }
 
-local wt
+# Open one worktree tab: Claude in the worktree + exit-time clean+pushed removal
+# prompt (zsh `always` fires it on every exit path).
+cwa_open() {
+  local wt="$1" name="${1:t}"
+  local cmd="{ claude --continue || claude } always { cd ${(q)root} && cwrm --on-exit ${(q)name} }"
+  print "cwa: opening $name"
+  WARP_HERE_CMD="$cmd" warp-here "$wt"
+}
+
 if [[ -n "$1" ]]; then
-  wt="$base/$1"
+  local wt="$base/$1"
   [[ -d "$wt" ]] || { print -u2 "cwa: no such worktree: $wt"; exit 1; }
-  exec warp-here "$wt"
+  cwa_open "$wt"
+  exit 0
 fi
 
 local -a wts=("$base"/*(/N))
 (( ${#wts} )) || { print -u2 "cwa: no worktrees found under $base"; exit 1; }
+local wt
 for wt in $wts; do
-  print "cwa: opening $wt"
-  warp-here "$wt"
+  cwa_open "$wt"
 done

@@ -1,15 +1,13 @@
 #!/usr/bin/env zsh
-# cw <name> — open a Warp tab for the worktree <name>.
+# cw <name> — open a classic Warp tab IN .claude/worktrees/<name> running Claude
+# in that worktree (so the Warp tab follows the worktree, single tab, no
+# duplicate session). Creates the worktree first if it doesn't exist.
 #
-#   • If .claude/worktrees/<name> does NOT exist yet → open a tab at the repo
-#     root running `claude --worktree <name>`. Claude creates and OWNS the
-#     worktree, so it also cleans it up on exit (keep/remove prompt; clean ones
-#     auto-prune) — no manual teardown needed.
-#   • If it already exists → just reopen it: a tab in the worktree dir running
-#     `claude --continue` (attach = navigate into the dir and launch Claude).
-#
-# Either way the tab is a classic terminal (see warp-here), not a Warp Agent.
-# Part of warp-worktree.
+# The worktree is created with plain `git worktree add` (NOT `claude --worktree`)
+# precisely so it exists before the tab opens and the tab can sit in it. Because
+# Claude therefore doesn't own it, cleanup is handled here instead: when you exit
+# Claude, you're prompted to remove the worktree IF it's clean + pushed
+# (`cwrm --on-exit`). Use `cwsweep` for bulk tidy-up. Part of warp-worktree.
 emulate -L zsh
 
 local name="${1:?usage: cw <name>}"
@@ -19,12 +17,14 @@ root="${root:A:h}"   # parent of the common .git = main working tree (works from
 local wt="$root/.claude/worktrees/$name"
 
 if [[ -d "$wt" ]]; then
-  print -u2 "cw: worktree exists — reopening (claude --continue): $wt"
-  exec warp-here "$wt"
+  print -u2 "cw: opening existing worktree $name"
+else
+  print -u2 "cw: creating worktree $name"
+  git -C "$root" worktree add "$wt" -b "$name" origin/HEAD || exit 1
 fi
 
-# Create: let Claude own the worktree's lifecycle. The tab opens at the repo
-# root (where --worktree resolves .claude/worktrees/<name>); Claude moves the
-# session into the new worktree and removes it on exit if you choose to.
-print -u2 "cw: creating worktree via 'claude --worktree $name'"
-exec env WARP_HERE_CMD="claude --worktree ${(q)name}" warp-here "$root"
+# Run Claude in the worktree (resume its session, else fresh). zsh's
+# `{ … } always { … }` runs the cleanup on EVERY exit path — /quit, Ctrl-D, or
+# Ctrl-C — so the exit-time removal prompt always fires.
+local cmd="{ claude --continue || claude } always { cd ${(q)root} && cwrm --on-exit ${(q)name} }"
+exec env WARP_HERE_CMD="$cmd" warp-here "$wt"

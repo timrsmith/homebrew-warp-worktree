@@ -1,0 +1,67 @@
+#!/usr/bin/env zsh
+# cwrm [--on-exit] [--force] <name> — remove the worktree .claude/worktrees/<name>
+# (and its branch) from the main checkout.
+#
+#   default     refuse if the worktree has uncommitted changes OR unpushed
+#               commits; pass --force to remove regardless.
+#   --on-exit   intended to run right after a Claude session exits (see `cw`).
+#               If the worktree is clean AND fully pushed, PROMPT
+#               "remove worktree '<name>'? [y/N]"; otherwise keep it silently
+#               (never nudges you toward losing work).
+#
+# Always removes from the main working tree, so it works even though the just-
+# exited shell was inside the worktree. Part of warp-worktree.
+emulate -L zsh
+
+local on_exit=0 force=0
+while [[ "$1" == -* ]]; do
+  case "$1" in
+    --on-exit) on_exit=1 ;;
+    -f|--force) force=1 ;;
+    --) shift; break ;;
+    *) print -u2 "cwrm: unknown option $1"; exit 2 ;;
+  esac
+  shift
+done
+local name="${1:?usage: cwrm [--on-exit] [--force] <name>}"
+
+local root; root="$(git rev-parse --git-common-dir 2>/dev/null)" || { print -u2 "cwrm: not in a git repo"; exit 1; }
+root="${root:A:h}"
+local wt="$root/.claude/worktrees/$name"
+[[ -d "$wt" ]] || { print -u2 "cwrm: no such worktree: $wt"; exit 1; }
+
+# Safe to remove == nothing would be lost: clean working tree + no unpushed
+# commits (measured against the branch's upstream, or origin/HEAD if it has none).
+cwrm_safe() {
+  [[ -z "$(git -C "$wt" status --porcelain 2>/dev/null)" ]] || return 1
+  local ahead
+  if git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    ahead="$(git -C "$wt" rev-list --count '@{u}..HEAD' 2>/dev/null)" || return 1
+  else
+    ahead="$(git -C "$wt" rev-list --count 'origin/HEAD..HEAD' 2>/dev/null)" || return 1
+  fi
+  [[ "$ahead" == 0 ]]
+}
+
+local branch; branch="$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+
+cwrm_do() {
+  git -C "$root" worktree remove "$wt" --force || return 1
+  [[ -n "$branch" && "$branch" != HEAD ]] && git -C "$root" branch -D "$branch" >/dev/null 2>&1
+  git -C "$root" worktree prune >/dev/null 2>&1
+  print "cwrm: removed $name${branch:+ (branch $branch)}"
+}
+
+if (( on_exit )); then
+  cwrm_safe || { print -u2 "cwrm: keeping $name (uncommitted or unpushed changes)"; exit 0; }
+  print -n "remove worktree '$name'? [y/N] "
+  local reply; read -r reply
+  if [[ "$reply" == [yY]* ]]; then cwrm_do; else print "cwrm: kept $name"; fi
+  exit 0
+fi
+
+if (( ! force )) && ! cwrm_safe; then
+  print -u2 "cwrm: $name has uncommitted or unpushed changes — use --force to remove anyway"
+  exit 1
+fi
+cwrm_do

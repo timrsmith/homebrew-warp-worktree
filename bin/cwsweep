@@ -1,0 +1,38 @@
+#!/usr/bin/env zsh
+# cwsweep [--dry-run|-n] — remove every .claude/worktrees/* of the current repo
+# whose worktree is clean AND fully pushed (skips anything with uncommitted or
+# unpushed changes). Bulk tidy-up for finished worktrees. Part of warp-worktree.
+emulate -L zsh
+
+local dry=0
+[[ "$1" == "--dry-run" || "$1" == "-n" ]] && dry=1
+
+local root; root="$(git rev-parse --git-common-dir 2>/dev/null)" || { print -u2 "cwsweep: not in a git repo"; exit 1; }
+root="${root:A:h}"
+local base="$root/.claude/worktrees"
+[[ -d "$base" ]] || { print "cwsweep: no worktrees under $base"; exit 0; }
+
+local wt name branch ahead removed=0
+for wt in "$base"/*(/N); do
+  name="${wt:t}"
+  if [[ -n "$(git -C "$wt" status --porcelain 2>/dev/null)" ]]; then
+    print "skip   $name (uncommitted changes)"; continue
+  fi
+  if git -C "$wt" rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    ahead="$(git -C "$wt" rev-list --count '@{u}..HEAD' 2>/dev/null)"
+  else
+    ahead="$(git -C "$wt" rev-list --count 'origin/HEAD..HEAD' 2>/dev/null)"
+  fi
+  if [[ "$ahead" != 0 ]]; then
+    print "skip   $name (unpushed commits)"; continue
+  fi
+  if (( dry )); then print "would remove $name"; continue; fi
+  branch="$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  if git -C "$root" worktree remove "$wt" --force; then
+    [[ -n "$branch" && "$branch" != HEAD ]] && git -C "$root" branch -D "$branch" >/dev/null 2>&1
+    print "remove $name${branch:+ (branch $branch)}"
+    (( removed++ ))
+  fi
+done
+(( dry )) || git -C "$root" worktree prune >/dev/null 2>&1
+(( dry )) || print "cwsweep: removed $removed worktree(s)"

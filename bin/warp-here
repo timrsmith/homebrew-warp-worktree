@@ -45,6 +45,7 @@ name = "Claude · ${dir:t}"
 [[panes]]
 id = "main"
 type = "terminal"
+shell = "zsh"
 directory = "$esc"
 commands = ["$cmdesc"]
 EOF

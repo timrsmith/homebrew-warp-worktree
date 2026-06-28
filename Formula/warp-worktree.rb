@@ -11,7 +11,7 @@ class WarpWorktree < Formula
   depends_on :macos
 
   def install
-    bin.install "bin/warp-here", "bin/cw", "bin/cwa"
+    bin.install "bin/warp-here", "bin/cw", "bin/cwa", "bin/cwrm", "bin/cwsweep"
   end
 
   def caveats
@@ -24,10 +24,12 @@ class WarpWorktree < Formula
       Commands:
         warp-here [dir]   open a classic Warp tab at dir (default: $PWD) running
                           `claude --continue || claude`
-        cw <name>         new: open a tab running `claude --worktree <name>`
-                          (Claude owns + cleans up the worktree); existing:
-                          reopen it with `claude --continue`
-        cwa [name]        open a tab in every (or one) .claude/worktrees/*
+        cw <name>         open a tab IN .claude/worktrees/<name> running Claude
+                          (creates it if needed); on exit, prompts to remove it
+                          if it's clean + pushed
+        cwa [name]        same, for every (or one) .claude/worktrees/*
+        cwrm [--force] <name>   remove a worktree + branch (refuses if dirty/unpushed)
+        cwsweep [-n]      remove all clean + pushed worktrees (bulk tidy-up)
 
       Override what runs in the tab:  WARP_HERE_CMD='claude --resume' warp-here
     EOS
