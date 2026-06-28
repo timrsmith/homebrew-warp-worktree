@@ -5,11 +5,11 @@ Open [Warp](https://warp.dev) terminal tabs that drop straight into
 
 Three commands:
 
-| Command           | What it does                                                                                                                                                                            |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `warp-here [dir]` | Open a **classic** Warp terminal tab at `dir` (default `$PWD`) running `claude --continue \|\| claude` — i.e. resume that directory's most recent Claude session, or start a fresh one. |
-| `cw <name>`       | Create a git worktree at `.claude/worktrees/<name>` (branch `<name>` off `origin/HEAD`) and open a tab in it. If it already exists, just (re)open a tab.                                |
-| `cwa [name]`      | Open a tab in **every** `.claude/worktrees/*` of the current repo — or just `<name>`. Each tab resumes its own worktree's Claude session.                                               |
+| Command           | What it does                                                                                                                                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `warp-here [dir]` | Open a **classic** Warp terminal tab at `dir` (default `$PWD`) running `claude --continue \|\| claude` — i.e. resume that directory's most recent Claude session, or start a fresh one.                                                                          |
+| `cw <name>`       | **New** `<name>` → open a tab at the repo root running `claude --worktree <name>`, so Claude creates the worktree and **cleans it up on exit** (keep/remove prompt; clean ones auto-prune). **Existing** → reopen it (tab in the worktree, `claude --continue`). |
+| `cwa [name]`      | Open a tab in **every** `.claude/worktrees/*` of the current repo — or just `<name>`. Each tab resumes its own worktree's Claude session.                                                                                                                        |
 
 Why this exists: a child process can't move its parent shell, so when Claude
 works in a worktree your Warp tab doesn't follow. And the `warp://…/new_tab`

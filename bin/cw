@@ -1,7 +1,15 @@
 #!/usr/bin/env zsh
-# cw <name> — create a git worktree at .claude/worktrees/<name> (new branch
-# <name> off origin/HEAD) and open a Warp tab in it via warp-here. If the
-# worktree already exists, just (re)open a tab for it. Part of warp-worktree.
+# cw <name> — open a Warp tab for the worktree <name>.
+#
+#   • If .claude/worktrees/<name> does NOT exist yet → open a tab at the repo
+#     root running `claude --worktree <name>`. Claude creates and OWNS the
+#     worktree, so it also cleans it up on exit (keep/remove prompt; clean ones
+#     auto-prune) — no manual teardown needed.
+#   • If it already exists → just reopen it: a tab in the worktree dir running
+#     `claude --continue` (attach = navigate into the dir and launch Claude).
+#
+# Either way the tab is a classic terminal (see warp-here), not a Warp Agent.
+# Part of warp-worktree.
 emulate -L zsh
 
 local name="${1:?usage: cw <name>}"
@@ -11,9 +19,12 @@ root="${root:A:h}"   # parent of the common .git = main working tree (works from
 local wt="$root/.claude/worktrees/$name"
 
 if [[ -d "$wt" ]]; then
-  print -u2 "cw: worktree already exists, opening it: $wt"
-else
-  git -C "$root" worktree add "$wt" -b "$name" origin/HEAD || exit 1
+  print -u2 "cw: worktree exists — reopening (claude --continue): $wt"
+  exec warp-here "$wt"
 fi
 
-exec warp-here "$wt"
+# Create: let Claude own the worktree's lifecycle. The tab opens at the repo
+# root (where --worktree resolves .claude/worktrees/<name>); Claude moves the
+# session into the new worktree and removes it on exit if you choose to.
+print -u2 "cw: creating worktree via 'claude --worktree $name'"
+exec env WARP_HERE_CMD="claude --worktree ${(q)name}" warp-here "$root"

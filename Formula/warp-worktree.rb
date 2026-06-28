@@ -24,7 +24,9 @@ class WarpWorktree < Formula
       Commands:
         warp-here [dir]   open a classic Warp tab at dir (default: $PWD) running
                           `claude --continue || claude`
-        cw <name>         create .claude/worktrees/<name> and open a tab in it
+        cw <name>         new: open a tab running `claude --worktree <name>`
+                          (Claude owns + cleans up the worktree); existing:
+                          reopen it with `claude --continue`
         cwa [name]        open a tab in every (or one) .claude/worktrees/*
 
       Override what runs in the tab:  WARP_HERE_CMD='claude --resume' warp-here
