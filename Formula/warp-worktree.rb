@@ -1,8 +1,8 @@
 class WarpWorktree < Formula
   desc "Open Warp tabs into Claude Code git worktrees, with cleanup helpers"
   homepage "https://github.com/timrsmith/homebrew-warp-worktree"
-  url "https://github.com/timrsmith/homebrew-warp-worktree/archive/refs/tags/v0.1.1.tar.gz"
-  sha256 "98a568b61dec4e6ee0dab1e4d071d1c75ee73feebcae3a6a1abae44ebb0503e4"
+  url "https://github.com/timrsmith/homebrew-warp-worktree/archive/refs/tags/v0.1.2.tar.gz"
+  sha256 "7ccf139a3078bfae7ae721111ebdc49cb8d50c5829ccd852500dbebcc226cc1e"
   license "MIT"
   head "https://github.com/timrsmith/homebrew-warp-worktree.git", branch: "main"
 
