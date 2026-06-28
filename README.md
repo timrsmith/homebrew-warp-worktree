@@ -81,14 +81,18 @@ from inside a worktree.
 
 ## Cutting a release
 
-The formula installs from a tagged tarball of this repo. To publish `vX.Y.Z`:
+Run `release.sh` from the repo root — it tags the version, computes the tarball
+sha256, bumps the formula's `url` + `sha256`, and pushes:
 
 ```sh
-git tag vX.Y.Z && git push origin vX.Y.Z
-# compute the tarball sha256 and paste it into Formula/warp-worktree.rb:
-curl -sL "https://github.com/timrsmith/homebrew-warp-worktree/archive/refs/tags/vX.Y.Z.tar.gz" | shasum -a 256
-# update `url` (vX.Y.Z) and `sha256` in the formula, then commit + push.
+./release.sh           # patch bump (v0.1.1 -> v0.1.2)
+./release.sh minor     # v0.1.x -> v0.2.0
+./release.sh 1.0.0     # explicit version
+./release.sh -n minor  # dry run — print what it would do, change nothing
 ```
+
+Then users get it with `brew update && brew upgrade warp-worktree`. It refuses
+unless the working tree is clean, on `main`, and in sync with `origin`.
 
 ## Hacking locally
 
