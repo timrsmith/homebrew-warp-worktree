@@ -1,0 +1,56 @@
+#!/usr/bin/env zsh
+# warp-here [dir] — open a CLASSIC Warp terminal tab at DIR (default: $PWD) and
+# launch Claude Code in it — NOT a Warp Agent tab.
+#
+# The `warp://action/new_tab?path=` URI can't run a command, so instead this
+# writes a one-off Warp Tab Config (a TOML pane with type="terminal",
+# directory=<dir>, commands=["claude --continue"]) into ~/.warp/tab_configs/
+# and opens it via `warp://tab_config/<name>`. type="terminal" guarantees a
+# normal shell tab rather than Warp's Agent input.
+#
+# `claude --continue` resumes the most recent Claude session for that directory
+# (each worktree is its own dir). Interactive `--continue` ERRORS (exit 1) when
+# there's no session, so we chain `|| claude` to start a fresh one in that case
+# — net effect: opening a worktree tab rejoins the agent already working there,
+# or starts fresh if there isn't one.
+#
+# Override what runs in the tab (default: claude --continue || claude):
+#   WARP_HERE_CMD='claude --resume'  warp-here   # pick a session interactively
+#   WARP_HERE_CMD=':'                warp-here   # just a shell, no claude
+# Set WARP_HERE_DRY=1 to print what it would do instead of opening a tab.
+emulate -L zsh
+
+local dir="${1:-$PWD}"
+[[ "$dir" = /* ]] || dir="$PWD/$dir"
+dir="${dir:A}"   # normalize to an absolute, symlink-resolved path
+
+local cmd="${WARP_HERE_CMD:-claude --continue || claude}"
+local cfgdir="$HOME/.warp/tab_configs"
+local name="claude_wt_$$_${RANDOM}"   # unique → Warp always reads fresh content
+
+# TOML basic strings only need backslash and double-quote escaped. Worktree
+# paths won't contain them, but a custom WARP_HERE_CMD might.
+local esc="${dir//\\/\\\\}"; esc="${esc//\"/\\\"}"
+local cmdesc="${cmd//\\/\\\\}"; cmdesc="${cmdesc//\"/\\\"}"
+
+if [[ -n "$WARP_HERE_DRY" ]]; then
+  print -r -- "would open warp://tab_config/$name"
+  print -r -- "  type      = \"terminal\""
+  print -r -- "  directory = \"$esc\""
+  print -r -- "  commands  = [\"$cmd\"]"
+else
+  mkdir -p "$cfgdir"
+  cat > "$cfgdir/$name.toml" <<EOF
+name = "Claude · ${dir:t}"
+[[panes]]
+id = "main"
+type = "terminal"
+directory = "$esc"
+commands = ["$cmdesc"]
+EOF
+  sleep 0.15   # give Warp's config watcher a moment to pick up the new file
+  open "warp://tab_config/$name"
+  # tidy: drop our generated configs older than a minute (spares the fresh one)
+  local f
+  for f in "$cfgdir"/claude_wt_*.toml(N.mm+1); do command rm -f -- "$f"; done
+fi

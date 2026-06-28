@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+# cw <name> — create a git worktree at .claude/worktrees/<name> (new branch
+# <name> off origin/HEAD) and open a Warp tab in it via warp-here. If the
+# worktree already exists, just (re)open a tab for it. Part of warp-worktree.
+emulate -L zsh
+
+local name="${1:?usage: cw <name>}"
+
+local root; root="$(git rev-parse --git-common-dir 2>/dev/null)" || { print -u2 "cw: not in a git repo"; exit 1; }
+root="${root:A:h}"   # parent of the common .git = main working tree (works from inside a worktree)
+local wt="$root/.claude/worktrees/$name"
+
+if [[ -d "$wt" ]]; then
+  print -u2 "cw: worktree already exists, opening it: $wt"
+else
+  git -C "$root" worktree add "$wt" -b "$name" origin/HEAD || exit 1
+fi
+
+exec warp-here "$wt"

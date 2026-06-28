@@ -1,0 +1,24 @@
+#!/usr/bin/env zsh
+# cwa [name] — open a Warp tab (via warp-here) in every .claude/worktrees/* of
+# the current repo, or just <name> if given. Each tab resumes that worktree's
+# Claude session (or starts fresh). Part of warp-worktree.
+emulate -L zsh
+
+local root; root="$(git rev-parse --git-common-dir 2>/dev/null)" || { print -u2 "cwa: not in a git repo"; exit 1; }
+root="${root:A:h}"   # parent of the common .git = main working tree (works from inside a worktree)
+local base="$root/.claude/worktrees"
+[[ -d "$base" ]] || { print -u2 "cwa: no worktrees under $base"; exit 1; }
+
+local wt
+if [[ -n "$1" ]]; then
+  wt="$base/$1"
+  [[ -d "$wt" ]] || { print -u2 "cwa: no such worktree: $wt"; exit 1; }
+  exec warp-here "$wt"
+fi
+
+local -a wts=("$base"/*(/N))
+(( ${#wts} )) || { print -u2 "cwa: no worktrees found under $base"; exit 1; }
+for wt in $wts; do
+  print "cwa: opening $wt"
+  warp-here "$wt"
+done
