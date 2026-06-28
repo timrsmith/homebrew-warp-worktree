@@ -48,11 +48,9 @@ brew tap timrsmith/warp-worktree
 brew install warp-worktree
 ```
 
-Before a tagged release exists, install from the default branch:
-
-```sh
-brew install --HEAD timrsmith/warp-worktree/warp-worktree
-```
+Upgrade later with `brew upgrade warp-worktree`. For the bleeding edge
+(unreleased `main`), use `brew install --HEAD timrsmith/warp-worktree/warp-worktree`
+(and `brew upgrade --fetch-HEAD warp-worktree` to update it).
 
 ## Usage
 
