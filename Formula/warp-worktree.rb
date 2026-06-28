@@ -1,5 +1,5 @@
 class WarpWorktree < Formula
-  desc "Open Warp terminal tabs in Claude Code git worktrees (warp-here, cw, cwa)"
+  desc "Open Warp tabs into Claude Code git worktrees, with cleanup helpers"
   homepage "https://github.com/timrsmith/homebrew-warp-worktree"
   # For a tagged release: point url at the tag tarball and fill in its sha256
   # (see "Cutting a release" in the README). Until then, install with --HEAD.
