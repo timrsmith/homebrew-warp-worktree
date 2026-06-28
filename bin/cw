@@ -28,6 +28,20 @@ if [[ -d "$wt" ]]; then
 else
   print -u2 "cw: creating worktree $name"
   git -C "$root" worktree add "$wt" -b "$name" origin/HEAD || exit 1
+
+  # Plain `git worktree add` makes a clean checkout with no untracked files and
+  # doesn't honor .worktreeinclude (that's a Claude-only step). Replicate it:
+  # copy gitignored files matching the repo's .worktreeinclude (e.g. .env) into
+  # the new worktree, preserving relative paths.
+  if [[ -f "$root/.worktreeinclude" ]]; then
+    local rel n=0
+    while IFS= read -r -d '' rel; do
+      git -C "$root" check-ignore -q -- "$rel" || continue   # only gitignored files
+      mkdir -p "$wt/${rel:h}"
+      cp -p "$root/$rel" "$wt/$rel" && (( n++ ))
+    done < <(git -C "$root" ls-files -o -i --exclude-from="$root/.worktreeinclude" -z 2>/dev/null)
+    (( n )) && print -u2 "cw: copied $n file(s) per .worktreeinclude"
+  fi
 fi
 
 # Run Claude in the worktree (resume its session, else fresh). zsh's

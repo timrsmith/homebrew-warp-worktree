@@ -27,6 +27,12 @@ worktree, so cleanup is handled here — on Claude exit, zsh's `{ … } always {
 runs `cwrm --on-exit`, which prompts to remove the worktree if it's clean +
 pushed (and `cwsweep` mops up the rest).
 
+Because `git worktree add` makes a clean checkout with no untracked files (and
+doesn't run Claude's [`.worktreeinclude`](https://code.claude.com/docs/en/worktrees)
+copy), `cw` replicates it: if the repo has a `.worktreeinclude`, the gitignored
+files it lists (e.g. `.env`) are copied into the new worktree, preserving paths —
+so a `cw` worktree starts with the same env files a `claude --worktree` one would.
+
 ## Requirements (macOS)
 
 Not installed by the formula — bring your own:
