@@ -22,7 +22,7 @@ local base="$root/.claude/worktrees"
 cwa_open() {
   local wt="$1" name="${1:t}"
   print -P "%F{magenta}🌳%f  opening %F{cyan}$name%f"
-  WARP_HERE_CMD="cw-run ${(q)name}" warp-here "$wt"
+  WARP_HERE_CMD="cw-run ${(q)name}; cd ${(q)root}" warp-here "$wt"
 }
 
 if [[ -n "$1" ]]; then

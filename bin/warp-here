@@ -35,19 +35,16 @@ local dir="${1:-$PWD}"
 dir="${dir:A}"   # normalize to an absolute, symlink-resolved path
 
 local cmd="${WARP_HERE_CMD:-claude --continue || claude}"
-local title="${WARP_HERE_TITLE:-${dir:t}}"   # tab title (default: the dir/worktree name)
 local cfgdir="$HOME/.warp/tab_configs"
 local name="claude_wt_$$_${RANDOM}"   # unique → Warp always reads fresh content
 
 # TOML basic strings only need backslash and double-quote escaped. Worktree
-# paths won't contain them, but a custom WARP_HERE_CMD/TITLE might.
+# paths won't contain them, but a custom WARP_HERE_CMD might.
 local esc="${dir//\\/\\\\}"; esc="${esc//\"/\\\"}"
 local cmdesc="${cmd//\\/\\\\}"; cmdesc="${cmdesc//\"/\\\"}"
-local titleesc="${title//\\/\\\\}"; titleesc="${titleesc//\"/\\\"}"
 
 if [[ -n "$WARP_HERE_DRY" ]]; then
   print -r -- "would open warp://tab_config/$name"
-  print -r -- "  title     = \"$titleesc\""
   print -r -- "  type      = \"terminal\""
   print -r -- "  directory = \"$esc\""
   print -r -- "  commands  = [\"$cmd\"]"
@@ -55,7 +52,6 @@ else
   mkdir -p "$cfgdir"
   cat > "$cfgdir/$name.toml" <<EOF
 name = "Claude · ${dir:t}"
-title = "$titleesc"
 [[panes]]
 id = "main"
 type = "terminal"
