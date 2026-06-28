@@ -38,6 +38,7 @@ class WarpWorktree < Formula
   end
 
   test do
-    assert_match "usage: cw", shell_output("#{bin}/cw 2>&1", 1)
+    assert_match "usage: cw", shell_output("#{bin}/cw --help")
+    assert_match "usage: cwrm", shell_output("#{bin}/cwrm 2>&1", 1)
   end
 end
