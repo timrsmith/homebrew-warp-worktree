@@ -15,10 +15,6 @@ local new=0
 [[ "$1" == "--new" ]] && { new=1; shift }
 local name="${1:?cw-run: missing worktree name}"
 local root; root="$(git rev-parse --git-common-dir 2>/dev/null)"; root="${root:A:h}"
-local wt="$root/.claude/worktrees/$name"
-
-# Set the tab title to the worktree name (OSC). Pairs with the reset below.
-print -n "\e]0;${name}\a"
 
 if (( new )); then
   print -P "%F{magenta}🌳%f  new worktree %F{cyan}%B${name}%b%f"
@@ -34,7 +30,4 @@ fi
   fi
 } always {
   cd "$root" && cwrm --on-exit "$name"
-  # If the worktree was removed, reset the tab title (back to the repo name) so
-  # the tab no longer claims a worktree that's gone.
-  [[ -d "$wt" ]] || print -n "\e]0;${root:t}\a"
 }
