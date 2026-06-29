@@ -17,21 +17,20 @@ local name="${1:?cw-run: missing worktree name}"
 local root; root="$(git rev-parse --git-common-dir 2>/dev/null)"; root="${root:A:h}"
 local wt="$root/.claude/worktrees/$name"
 
-# Title the tab after the worktree. Warp's auto-title (disabled by the caller
-# via WARP_DISABLE_AUTO_TITLE) would otherwise clobber this every prompt.
-print -n "\e]0;${name}\a"
-
 if (( new )); then
   print -P "%F{magenta}🌳%f  new worktree %F{cyan}%B${name}%b%f"
 else
   print -P "%F{magenta}🌳%f  worktree %F{cyan}%B${name}%b%f %F{244}· resuming session%f"
 fi
 
+# Claude Code titles the tab after its session name, so name the session after
+# the worktree — the tab title becomes the worktree name instead of "Claude
+# Code". (Warp auto-title is disabled by the caller so it won't fight this.)
 {
   if (( new )); then
-    claude
+    claude --name "$name"
   else
-    claude --continue || claude
+    claude --continue || claude --name "$name"
   fi
 } always {
   cd "$root" && cwrm --on-exit "$name"
