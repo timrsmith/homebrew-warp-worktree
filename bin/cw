@@ -77,7 +77,7 @@ local wt="$base_dir/$name"
 
 if [[ -d "$wt" ]]; then
   print -P "%F{magenta}🌳%f opening existing worktree %F{cyan}$name%f"
-  exec env WARP_HERE_CMD="cw-run ${(q)name}; cd ${(q)root}" warp-here "$wt"
+  exec env WARP_HERE_CMD="export WARP_DISABLE_AUTO_TITLE=true; cw-run ${(q)name}; cd ${(q)root}" warp-here "$wt"
 fi
 
 # --- create a new worktree ---
@@ -110,4 +110,4 @@ if [[ -f "$root/.worktreeinclude" ]]; then
   (( n )) && print -P "%F{244}↳ copied $n file(s) per .worktreeinclude%f"
 fi
 
-exec env WARP_HERE_CMD="cw-run --new ${(q)name}; cd ${(q)root}" warp-here "$wt"
+exec env WARP_HERE_CMD="export WARP_DISABLE_AUTO_TITLE=true; cw-run --new ${(q)name}; cd ${(q)root}" warp-here "$wt"
