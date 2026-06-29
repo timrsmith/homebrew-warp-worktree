@@ -33,6 +33,9 @@ fi
     claude --continue || claude --name "$name"
   fi
 } always {
+  # Claude clears the tab title on exit, so re-assert the worktree name for the
+  # keep/remove prompt window (the worktree still exists until you decide).
+  print -n "\e]0;${name}\a"
   cd "$root" && cwrm --on-exit "$name"
   # If the worktree was removed, retitle the tab to the repo (it no longer
   # holds that worktree).
